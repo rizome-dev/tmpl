@@ -1,6 +1,6 @@
 # If you prefer the allow list template instead of the deny list, see community template:
 # https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
-#
+
 # Binaries for programs and plugins
 *.exe
 *.exe~
@@ -11,22 +11,100 @@
 # Test binary, built with `go test -c`
 *.test
 
-# Code coverage profiles and other test artifacts
+# Output of the go coverage tool
 *.out
-coverage.*
+*.cover
 *.coverprofile
+coverage.*
+coverage/
 profile.cov
 
-# Dependency directories (remove the comment below to include it)
-# vendor/
+# Dependency directories
+vendor/
 
 # Go workspace file
 go.work
 go.work.sum
 
-# env file
-.env
+# Build directories
+build/
+dist/
+bin/
 
-# Editor/IDE
-# .idea/
-# .vscode/
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.sublime-*
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Debug files
+debug
+__debug_bin*
+*.pprof
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Log files
+*.log
+logs/
+
+# Security reports
+security-report.json
+gosec-report.json
+
+# OS specific
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Project specific binaries
+/tmpl
+/tmpl_*
+tmpl-*
+
+# Shared library build artifacts
+*.h
+!sharedlib/*.h
+
+# Test artifacts
+test-e2e/
+*.test.out
+
+# Benchmarking
+*.bench
+benchmarks/
+
+# Documentation build
+docs/_build/
+docs/_site/
+site/
+
+# Archives
+*.tar.gz
+*.zip
+
+# Certificates
+*.pem
+*.key
+*.crt
+*.csr
+
+# Local notes
+.notes/
+TODO.md.local
