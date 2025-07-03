@@ -206,8 +206,8 @@ generate-header:
         echo "{{yellow}}Header file will be generated during build{{reset}}"; \
     fi
 
-# Bootstrap a new project from this template
-bootstrap project_name module_name='github.com/user/project' type='library' *args='':
+# Bootstrap the current project from this template
+bootstrap module_name='' type='cli' *args='':
     #!/bin/bash
     set -euo pipefail
     
@@ -218,8 +218,18 @@ bootstrap project_name module_name='github.com/user/project' type='library' *arg
     BOLD='\033[1m'
     NC='\033[0m'
     
-    echo -e "${BOLD}Bootstrapping new project: {{project_name}}${NC}"
-    echo -e "Module: {{module_name}}"
+    # Get project name from current directory
+    PROJECT_NAME=$(basename "$(pwd)")
+    
+    # Set module name from parameter or derive from directory
+    if [ -z "{{module_name}}" ]; then
+        MODULE_NAME="github.com/$(git config user.name 2>/dev/null || echo 'user')/${PROJECT_NAME}"
+    else
+        MODULE_NAME="{{module_name}}"
+    fi
+    
+    echo -e "${BOLD}Bootstrapping project: ${PROJECT_NAME}${NC}"
+    echo -e "Module: ${MODULE_NAME}"
     echo -e "Type: {{type}}"
     echo
     
@@ -233,199 +243,170 @@ bootstrap project_name module_name='github.com/user/project' type='library' *arg
             ;;
     esac
     
-    # Create project directory
-    TARGET_DIR="./{{project_name}}"
-    if [ -d "$TARGET_DIR" ]; then
-        echo -e "${YELLOW}Directory $TARGET_DIR already exists${NC}"
-        exit 1
-    fi
-    
+    # Create minimal directory structure
     echo -e "${BLUE}Creating project structure...${NC}"
-    mkdir -p "$TARGET_DIR"
-    
-    # Copy template files
-    cp -r cmd pkg internal docs scripts "$TARGET_DIR/" 2>/dev/null || true
-    cp .editorconfig .gitignore .golangci.yml Makefile "$TARGET_DIR/"
-    
-    # Copy justfile for sharedlib projects
-    if [ "{{type}}" = "sharedlib" ]; then
-        cp justfile "$TARGET_DIR/"
-        cp -r sharedlib "$TARGET_DIR/" 2>/dev/null || true
-    fi
+    mkdir -p cmd pkg internal docs
     
     # Initialize go module
-    cd "$TARGET_DIR"
-    go mod init "{{module_name}}"
+    echo -e "${BLUE}Initializing Go module...${NC}"
+    go mod init "${MODULE_NAME}"
     
-    # Update imports in Go files
-    find . -type f -name "*.go" -exec sed -i.bak "s|github.com/rizome-dev/tmpl|{{module_name}}|g" {} \; && find . -name "*.bak" -delete
+    # Update imports in Go files if any exist
+    if find . -name "*.go" -type f | grep -q .; then
+        find . -type f -name "*.go" -exec sed -i.bak "s|github.com/rizome-dev/tmpl|${MODULE_NAME}|g" {} \; && find . -name "*.bak" -delete
+    fi
     
-    # Update Makefile
-    sed -i.bak "s|BINARY_NAME=tmpl|BINARY_NAME={{project_name}}|g" Makefile && rm Makefile.bak
+    # Update Makefile if it exists
+    if [ -f "Makefile" ]; then
+        sed -i.bak "s|BINARY_NAME=tmpl|BINARY_NAME=${PROJECT_NAME}|g" Makefile && rm Makefile.bak
+    fi
     
-    # Create type-specific main file
+    # Create type-specific structure
     case "{{type}}" in
         cli)
-            mkdir -p "cmd/{{project_name}}"
-            mv "cmd/example/main.go" "cmd/{{project_name}}/main.go" 2>/dev/null || true
+            echo -e "${BLUE}Setting up CLI project structure...${NC}"
+            mkdir -p "cmd/${PROJECT_NAME}"
+            if [ -f "cmd/example/main.go" ]; then
+                mv "cmd/example/main.go" "cmd/${PROJECT_NAME}/main.go"
+            else
+                # Create minimal CLI main file
+                cat > "cmd/${PROJECT_NAME}/main.go" << EOF
+package main
+
+import (
+    "fmt"
+    "os"
+)
+
+func main() {
+    fmt.Println("Hello from ${PROJECT_NAME}")
+    os.Exit(0)
+}
+EOF
+            fi
             rm -rf "cmd/example"
             ;;
         library)
-            mkdir -p "pkg/{{project_name}}"
-            if [ -f "pkg/example/example.go" ]; then
-                sed "s/example/{{project_name}}/g" "pkg/example/example.go" > "pkg/{{project_name}}/{{project_name}}.go"
-                sed "s/example/{{project_name}}/g" "pkg/example/example_test.go" > "pkg/{{project_name}}/{{project_name}}_test.go"
-            fi
-            rm -rf "pkg/example"
-            rm -rf "cmd/example"
+            echo -e "${BLUE}Setting up library project structure...${NC}"
+            mkdir -p "pkg/${PROJECT_NAME}"
+            # Create minimal library file
+            cat > "pkg/${PROJECT_NAME}/${PROJECT_NAME}.go" << EOF
+package ${PROJECT_NAME}
+
+// Version returns the library version
+func Version() string {
+    return "0.1.0"
+}
+EOF
+            # Create minimal test file
+            cat > "pkg/${PROJECT_NAME}/${PROJECT_NAME}_test.go" << EOF
+package ${PROJECT_NAME}
+
+import "testing"
+
+func TestVersion(t *testing.T) {
+    if v := Version(); v == "" {
+        t.Error("Version() returned empty string")
+    }
+}
+EOF
+            rm -rf "cmd/example" "pkg/example"
             ;;
         api)
-            mkdir -p "cmd/{{project_name}}"
-            cat > "cmd/{{project_name}}/main.go" << 'EOF'
-    package main
-    
-    import (
-        "context"
-        "fmt"
-        "log"
-        "net/http"
-        "os"
-        "os/signal"
-        "syscall"
-        "time"
-    )
-    
-    func main() {
-        ctx, cancel := context.WithCancel(context.Background())
-        defer cancel()
-    
-        sigChan := make(chan os.Signal, 1)
-        signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
-    
-        mux := http.NewServeMux()
-        mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-            fmt.Fprintf(w, "Welcome to {{project_name}} API\n")
-        })
-        mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-            w.Header().Set("Content-Type", "application/json")
-            w.WriteHeader(http.StatusOK)
-            fmt.Fprint(w, `{"status":"ok"}`)
-        })
-    
-        srv := &http.Server{
-            Addr:         ":8080",
-            Handler:      mux,
-            ReadTimeout:  10 * time.Second,
-            WriteTimeout: 10 * time.Second,
-            IdleTimeout:  60 * time.Second,
-        }
-    
-        go func() {
-            log.Printf("Starting server on %s", srv.Addr)
-            if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-                log.Fatalf("Failed to start server: %v", err)
-            }
-        }()
-    
-        <-sigChan
-        log.Println("Shutting down server...")
-    
-        shutdownCtx, shutdownCancel := context.WithTimeout(ctx, 30*time.Second)
-        defer shutdownCancel()
-    
-        if err := srv.Shutdown(shutdownCtx); err != nil {
-            log.Printf("Server shutdown error: %v", err)
-        }
-    
-        log.Println("Server stopped")
+            echo -e "${BLUE}Setting up API project structure...${NC}"
+            mkdir -p "cmd/${PROJECT_NAME}"
+            cat > "cmd/${PROJECT_NAME}/main.go" << EOF
+package main
+
+import (
+    "context"
+    "fmt"
+    "log"
+    "net/http"
+    "os"
+    "os/signal"
+    "syscall"
+    "time"
+)
+
+func main() {
+    ctx, cancel := context.WithCancel(context.Background())
+    defer cancel()
+
+    sigChan := make(chan os.Signal, 1)
+    signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+
+    mux := http.NewServeMux()
+    mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusOK)
+        fmt.Fprint(w, \`{"status":"ok"}\`)
+    })
+
+    srv := &http.Server{
+        Addr:         ":8080",
+        Handler:      mux,
+        ReadTimeout:  10 * time.Second,
+        WriteTimeout: 10 * time.Second,
+        IdleTimeout:  60 * time.Second,
     }
-    EOF
+
+    go func() {
+        log.Printf("Starting server on %s", srv.Addr)
+        if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+            log.Fatalf("Failed to start server: %v", err)
+        }
+    }()
+
+    <-sigChan
+    log.Println("Shutting down server...")
+
+    shutdownCtx, shutdownCancel := context.WithTimeout(ctx, 30*time.Second)
+    defer shutdownCancel()
+
+    if err := srv.Shutdown(shutdownCtx); err != nil {
+        log.Printf("Server shutdown error: %v", err)
+    }
+
+    log.Println("Server stopped")
+}
+EOF
             rm -rf "cmd/example"
+            ;;
+        sharedlib)
+            echo -e "${BLUE}Setting up shared library project structure...${NC}"
+            # sharedlib already exists in template, just clean up
+            rm -rf "cmd/example" "pkg/example"
             ;;
     esac
     
-    # Create basic README
-    cat > README.md << EOF
-    # {{project_name}}
-    
-    TODO: Add project description
-    
-    ## Installation
-    
-    \`\`\`bash
-    go get {{module_name}}
-    \`\`\`
-    
-    ## Usage
-    
-    TODO: Add usage examples
-    
-    ## Development
-    
-    ### Setup
-    
-    \`\`\`bash
-    make setup
-    \`\`\`
-    
-    ### Build
-    
-    \`\`\`bash
-    make build
-    \`\`\`
-    
-    ### Test
-    
-    \`\`\`bash
-    make test
-    \`\`\`
-    
-    ## License
-    
-    TODO: Add license information
-    EOF
-    
-    # Initialize git if requested
-    if [[ " {{args}} " =~ " --git " ]] || [[ " {{args}} " =~ " -g " ]]; then
-        git init
-        git add .
-        git commit -m "Initial commit
-    
-    Created from github.com/rizome-dev/tmpl template"
-        echo -e "${GREEN}✓ Git repository initialized${NC}"
-    fi
-    
-    # Install deps if requested
-    if [[ " {{args}} " =~ " --install " ]] || [[ " {{args}} " =~ " -i " ]]; then
-        make setup || true
-        echo -e "${GREEN}✓ Dependencies installed${NC}"
-    fi
+    # Clean up any remaining example directories
+    find . -type d -name "example" -exec rm -rf {} + 2>/dev/null || true
     
     echo
-    echo -e "${GREEN}✓ Project '{{project_name}}' created successfully!${NC}"
+    echo -e "${GREEN}✓ Project '${PROJECT_NAME}' bootstrapped successfully!${NC}"
     echo
     echo "Next steps:"
-    echo "  cd {{project_name}}"
-    echo "  make setup"
-    echo "  make test"
-    echo "  make build"
+    echo "  make setup    # Install development tools"
+    echo "  make test     # Run tests"
+    echo "  make build    # Build the project"
 
 # Show bootstrap help
 bootstrap-help:
     @echo "{{bold}}Bootstrap Usage:{{reset}}"
     @echo ""
-    @echo "  just bootstrap <project-name> [module-name] [type] [options]"
+    @echo "  just bootstrap [module-name] [type]"
     @echo ""
     @echo "{{bold}}Arguments:{{reset}}"
-    @echo "  project-name    Name of the new project (required)"
-    @echo "  module-name     Go module name (default: github.com/user/project)"
-    @echo "  type            Project type: cli, library, sharedlib, api (default: library)"
+    @echo "  module-name     Go module name (default: github.com/<git-user>/<current-dir>)"
+    @echo "  type            Project type: cli, library, sharedlib, api (default: cli)"
     @echo ""
-    @echo "{{bold}}Options:{{reset}}"
-    @echo "  --git, -g       Initialize git repository"
-    @echo "  --install, -i   Install development dependencies"
+    @echo "{{bold}}Notes:{{reset}}"
+    @echo "  - Bootstraps the current directory (must be run from project root)"
+    @echo "  - Creates go.mod and basic project structure based on type"
+    @echo "  - Updates imports from template to your module name"
     @echo ""
     @echo "{{bold}}Examples:{{reset}}"
-    @echo "  just bootstrap myapp github.com/user/myapp cli --git"
-    @echo "  just bootstrap mylib github.com/company/mylib library"
-    @echo "  just bootstrap myapi github.com/org/myapi api --git --install"
+    @echo "  just bootstrap                           # Uses defaults"
+    @echo "  just bootstrap github.com/user/myapp     # Custom module, default type (cli)"
+    @echo "  just bootstrap github.com/org/mylib library  # Custom module and type"

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Go template library project (`github.com/rizome-dev/tmpl`) built by rizome labs. The project is in its initial setup phase with standard Go project structure but no implementation yet.
+This is a Go template library project (`github.com/rizome-dev/tmpl`) built by rizome labs. It serves as a production-ready template for starting new Go projects with proper structure, CI/CD, and build tooling.
 
 ## Build Commands
 
@@ -20,21 +20,34 @@ just build-linux-local
 # Build for Linux using Docker (ensures compatibility)
 just build-linux-docker
 
-# Bootstrap a new project from this template
-just bootstrap myproject github.com/user/myproject cli --git
+# Bootstrap the current directory as a new project
+just bootstrap                                    # Uses defaults
+just bootstrap github.com/user/myproject          # Custom module name
+just bootstrap github.com/user/myproject library  # Custom module and type
 ```
 
-These commands build shared C libraries (.dylib for macOS, .so for Linux) from Go code located at `./sharedlib/sharedlib.go` (file needs to be created).
+### Bootstrap Command
+
+The `bootstrap` command initializes the current directory as a new Go project. It:
+- Creates a go.mod file with the specified module name
+- Sets up the project structure based on type (cli, library, sharedlib, api)
+- Updates all imports from the template to your module name
+- Creates minimal starter files for your project type
+- Does NOT manipulate go.mod beyond creation
+- Does NOT install dependencies (use `make setup` after bootstrap)
+
+Note: Run bootstrap from the root of your cloned template repository.
 
 ## Development Setup
 
 1. This is a Go 1.23.4 project
-2. Use `go mod vendor` before building (handled by just commands)
+2. After bootstrap, run `make setup` to install development tools
 3. Build outputs go to `./build/` directory
+4. Use `make build` for building, `make test` for testing
 
 ## Project Structure
 
-Standard Go project layout:
+Standard Go project layout created by bootstrap:
 - `cmd/` - Main applications
 - `internal/` - Private application and library code  
 - `pkg/` - Library code for external use
@@ -42,10 +55,11 @@ Standard Go project layout:
 
 ## Testing
 
-No test framework is currently set up. When implementing tests, use standard Go testing practices with `go test`.
+Use standard Go testing practices with `go test` or `make test`.
 
 ## Important Notes
 
-- The project builds shared C libraries, suggesting interoperability with other languages
+- The template supports multiple project types: CLI, library, shared C library, and API server
+- Shared library projects can build .dylib (macOS) and .so (Linux) files for C interoperability
 - Contact: hi@rizome.dev
 - Documentation: https://pkg.go.dev/github.com/rizome-dev/tmpl
