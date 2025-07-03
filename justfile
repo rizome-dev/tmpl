@@ -270,19 +270,17 @@ bootstrap module_name='' type='cli' *args='':
                 mv "cmd/example/main.go" "cmd/${PROJECT_NAME}/main.go"
             else
                 # Create minimal CLI main file
-                cat > "cmd/${PROJECT_NAME}/main.go" << EOF
-package main
-
-import (
-    "fmt"
-    "os"
-)
-
-func main() {
-    fmt.Println("Hello from ${PROJECT_NAME}")
-    os.Exit(0)
-}
-EOF
+                echo 'package main' > "cmd/${PROJECT_NAME}/main.go"
+                echo '' >> "cmd/${PROJECT_NAME}/main.go"
+                echo 'import (' >> "cmd/${PROJECT_NAME}/main.go"
+                echo '    "fmt"' >> "cmd/${PROJECT_NAME}/main.go"
+                echo '    "os"' >> "cmd/${PROJECT_NAME}/main.go"
+                echo ')' >> "cmd/${PROJECT_NAME}/main.go"
+                echo '' >> "cmd/${PROJECT_NAME}/main.go"
+                echo 'func main() {' >> "cmd/${PROJECT_NAME}/main.go"
+                echo '    fmt'"'.Println(\"Hello from ${PROJECT_NAME}\")' >> "cmd/${PROJECT_NAME}/main.go"
+                echo '    os'"'.Exit(0)' >> "cmd/${PROJECT_NAME}/main.go"
+                echo '}' >> "cmd/${PROJECT_NAME}/main.go"
             fi
             rm -rf "cmd/example"
             ;;
@@ -290,87 +288,82 @@ EOF
             echo -e "${BLUE}Setting up library project structure...${NC}"
             mkdir -p "pkg/${PROJECT_NAME}"
             # Create minimal library file
-            cat > "pkg/${PROJECT_NAME}/${PROJECT_NAME}.go" << EOF
-package ${PROJECT_NAME}
-
-// Version returns the library version
-func Version() string {
-    return "0.1.0"
-}
-EOF
+            echo "package ${PROJECT_NAME}" > "pkg/${PROJECT_NAME}/${PROJECT_NAME}.go"
+            echo "" >> "pkg/${PROJECT_NAME}/${PROJECT_NAME}.go"
+            echo "// Version returns the library version" >> "pkg/${PROJECT_NAME}/${PROJECT_NAME}.go"
+            echo "func Version() string {" >> "pkg/${PROJECT_NAME}/${PROJECT_NAME}.go"
+            echo '    return "0.1.0"' >> "pkg/${PROJECT_NAME}/${PROJECT_NAME}.go"
+            echo "}" >> "pkg/${PROJECT_NAME}/${PROJECT_NAME}.go"
             # Create minimal test file
-            cat > "pkg/${PROJECT_NAME}/${PROJECT_NAME}_test.go" << EOF
-package ${PROJECT_NAME}
-
-import "testing"
-
-func TestVersion(t *testing.T) {
-    if v := Version(); v == "" {
-        t.Error("Version() returned empty string")
-    }
-}
-EOF
+            echo "package ${PROJECT_NAME}" > "pkg/${PROJECT_NAME}/${PROJECT_NAME}_test.go"
+            echo "" >> "pkg/${PROJECT_NAME}/${PROJECT_NAME}_test.go"
+            echo 'import "testing"' >> "pkg/${PROJECT_NAME}/${PROJECT_NAME}_test.go"
+            echo "" >> "pkg/${PROJECT_NAME}/${PROJECT_NAME}_test.go"
+            echo "func TestVersion(t *testing.T) {" >> "pkg/${PROJECT_NAME}/${PROJECT_NAME}_test.go"
+            echo '    if v := Version(); v == "" {' >> "pkg/${PROJECT_NAME}/${PROJECT_NAME}_test.go"
+            echo '        t'"'.Error(\"Version() returned empty string\")' >> "pkg/${PROJECT_NAME}/${PROJECT_NAME}_test.go"
+            echo "    }" >> "pkg/${PROJECT_NAME}/${PROJECT_NAME}_test.go"
+            echo "}" >> "pkg/${PROJECT_NAME}/${PROJECT_NAME}_test.go"
             rm -rf "cmd/example" "pkg/example"
             ;;
         api)
             echo -e "${BLUE}Setting up API project structure...${NC}"
             mkdir -p "cmd/${PROJECT_NAME}"
-            cat > "cmd/${PROJECT_NAME}/main.go" << EOF
-package main
-
-import (
-    "context"
-    "fmt"
-    "log"
-    "net/http"
-    "os"
-    "os/signal"
-    "syscall"
-    "time"
-)
-
-func main() {
-    ctx, cancel := context.WithCancel(context.Background())
-    defer cancel()
-
-    sigChan := make(chan os.Signal, 1)
-    signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
-
-    mux := http.NewServeMux()
-    mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-        w.Header().Set("Content-Type", "application/json")
-        w.WriteHeader(http.StatusOK)
-        fmt.Fprint(w, \`{"status":"ok"}\`)
-    })
-
-    srv := &http.Server{
-        Addr:         ":8080",
-        Handler:      mux,
-        ReadTimeout:  10 * time.Second,
-        WriteTimeout: 10 * time.Second,
-        IdleTimeout:  60 * time.Second,
-    }
-
-    go func() {
-        log.Printf("Starting server on %s", srv.Addr)
-        if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-            log.Fatalf("Failed to start server: %v", err)
-        }
-    }()
-
-    <-sigChan
-    log.Println("Shutting down server...")
-
-    shutdownCtx, shutdownCancel := context.WithTimeout(ctx, 30*time.Second)
-    defer shutdownCancel()
-
-    if err := srv.Shutdown(shutdownCtx); err != nil {
-        log.Printf("Server shutdown error: %v", err)
-    }
-
-    log.Println("Server stopped")
-}
-EOF
+            # Create API server file using printf to avoid just parser issues
+            printf '%s\n' 'package main' > "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' 'import (' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '    "context"' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '    "fmt"' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '    "log"' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '    "net/http"' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '    "os"' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '    "os/signal"' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '    "syscall"' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '    "time"' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' ')' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' 'func main() {' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '    ctx, cancel := context'"'.WithCancel(context.Background())' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '    defer cancel()' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '    sigChan := make(chan os'"'.Signal, 1)' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '    signal'"'.Notify(sigChan, os.Interrupt, syscall.SIGTERM)' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '    mux := http'"'.NewServeMux()' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '    mux'"'.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '        w'"'.Header().Set("Content-Type", "application/json")' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '        w'"'.WriteHeader(http.StatusOK)' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '        fmt'"'.Fprint(w, `{"status":"ok"}`)' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '    })' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '    srv := &http'"'.Server{' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '        Addr:         ":8080",' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '        Handler:      mux,' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '        ReadTimeout:  10 * time'"'.Second,' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '        WriteTimeout: 10 * time'"'.Second,' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '        IdleTimeout:  60 * time'"'.Second,' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '    }' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '    go func() {' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '        log'"'.Printf("Starting server on %s", srv.Addr)' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '        if err := srv'"'.ListenAndServe(); err != nil && err != http.ErrServerClosed {' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '            log'"'.Fatalf("Failed to start server: %v", err)' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '        }' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '    }()' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '    <-sigChan' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '    log'"'.Println("Shutting down server...")' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '    shutdownCtx, shutdownCancel := context'"'.WithTimeout(ctx, 30*time.Second)' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '    defer shutdownCancel()' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '    if err := srv'"'.Shutdown(shutdownCtx); err != nil {' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '        log'"'.Printf("Server shutdown error: %v", err)' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '    }' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '    log'"'.Println("Server stopped")' >> "cmd/${PROJECT_NAME}/main.go"
+            printf '%s\n' '}' >> "cmd/${PROJECT_NAME}/main.go"
             rm -rf "cmd/example"
             ;;
         sharedlib)
