@@ -50,7 +50,7 @@ func (c *Client) Process(input string) (string, error) {
 	}
 
 	result := fmt.Sprintf("Processed by %s: %s", c.config.Name, input)
-	
+
 	if c.config.Verbose {
 		fmt.Printf("[DEBUG] %s\n", result)
 	}

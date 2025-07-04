@@ -1,3 +1,4 @@
+// Package main implements the example CLI application.
 package main
 
 import (
@@ -8,8 +9,11 @@ import (
 )
 
 var (
-	Version   = "dev"
+	// Version is the application version.
+	Version = "dev"
+	// GitCommit is the git commit hash.
 	GitCommit = "unknown"
+	// BuildDate is the build date.
 	BuildDate = "unknown"
 )
 
