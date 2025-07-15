@@ -265,6 +265,36 @@ bootstrap module_name='' type='cli' *args='':
         sed -i.bak "s|BINARY_NAME=tmpl|BINARY_NAME=${PROJECT_NAME}|g" Makefile && rm Makefile.bak
     fi
     
+    # Update .gitignore project-specific entries
+    if [ -f ".gitignore" ]; then
+        sed -i.bak "s|/tmpl$|/${PROJECT_NAME}|g" .gitignore
+        sed -i.bak "s|/tmpl_|/${PROJECT_NAME}_|g" .gitignore
+        sed -i.bak "s|tmpl-|${PROJECT_NAME}-|g" .gitignore
+        rm -f .gitignore.bak
+    fi
+    
+    # Update .golangci.yml if it exists
+    if [ -f ".golangci.yml" ]; then
+        sed -i.bak "s|github.com/rizome-dev/tmpl|${MODULE_NAME}|g" .golangci.yml && rm .golangci.yml.bak
+    fi
+    
+    # Update README.md if it exists
+    if [ -f "README.md" ]; then
+        sed -i.bak "s|# tmpl|# ${PROJECT_NAME}|g" README.md
+        sed -i.bak "s|github.com/rizome-dev/tmpl|${MODULE_NAME}|g" README.md
+        rm -f README.md.bak
+    fi
+    
+    # Update CLAUDE.md if it exists - only update module references, not the template description
+    if [ -f "CLAUDE.md" ]; then
+        # Only update the actual module reference, not the template description
+        sed -i.bak "s|github.com/rizome-dev/tmpl)|${MODULE_NAME})|g" CLAUDE.md
+        rm -f CLAUDE.md.bak
+    fi
+    
+    # Update "Hello from tmpl!" messages in any Go files
+    find . -type f -name "*.go" -exec sed -i.bak "s|Hello from tmpl!|Hello from ${PROJECT_NAME}!|g" {} \; && find . -name "*.bak" -delete
+    
     # Create type-specific structure
     case "{{type}}" in
         cli)
