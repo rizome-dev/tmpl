@@ -235,10 +235,10 @@ bootstrap module_name='' type='cli' *args='':
     
     # Validate project type
     case "{{type}}" in
-        cli|library|sharedlib|api)
+        cli|sdk|sharedlib|api)
             ;;
         *)
-            echo -e "${YELLOW}Invalid project type. Use: cli, library, sharedlib, or api${NC}"
+            echo -e "${YELLOW}Invalid project type. Use: cli, sdk, sharedlib, or api${NC}"
             exit 1
             ;;
     esac
@@ -247,10 +247,12 @@ bootstrap module_name='' type='cli' *args='':
     echo -e "${BLUE}Creating project structure...${NC}"
     mkdir -p cmd pkg internal docs
     
-    # Initialize go module if it doesn't exist
-    echo -e "${BLUE}Initializing Go module...${NC}"
+    # Initialize or update go module
+    echo -e "${BLUE}Setting up Go module...${NC}"
     if [ -f "go.mod" ]; then
-        echo -e "${YELLOW}go.mod already exists, skipping initialization${NC}"
+        echo -e "${YELLOW}Updating existing go.mod with new module name${NC}"
+        # Update the module line in go.mod
+        sed -i.bak "s|^module .*|module ${MODULE_NAME}|g" go.mod && rm -f go.mod.bak
     else
         go mod init "${MODULE_NAME}"
     fi
@@ -318,26 +320,147 @@ bootstrap module_name='' type='cli' *args='':
             fi
             rm -rf "cmd/example"
             ;;
-        library)
-            echo -e "${BLUE}Setting up library project structure...${NC}"
-            mkdir -p "pkg/${PROJECT_NAME}"
-            # Create minimal library file
-            echo "package ${PROJECT_NAME}" > "pkg/${PROJECT_NAME}/${PROJECT_NAME}.go"
-            echo "" >> "pkg/${PROJECT_NAME}/${PROJECT_NAME}.go"
-            echo "// Version returns the library version" >> "pkg/${PROJECT_NAME}/${PROJECT_NAME}.go"
-            echo "func Version() string {" >> "pkg/${PROJECT_NAME}/${PROJECT_NAME}.go"
-            echo '    return "0.1.0"' >> "pkg/${PROJECT_NAME}/${PROJECT_NAME}.go"
-            echo "}" >> "pkg/${PROJECT_NAME}/${PROJECT_NAME}.go"
-            # Create minimal test file
-            echo "package ${PROJECT_NAME}" > "pkg/${PROJECT_NAME}/${PROJECT_NAME}_test.go"
-            echo "" >> "pkg/${PROJECT_NAME}/${PROJECT_NAME}_test.go"
-            echo 'import "testing"' >> "pkg/${PROJECT_NAME}/${PROJECT_NAME}_test.go"
-            echo "" >> "pkg/${PROJECT_NAME}/${PROJECT_NAME}_test.go"
-            echo "func TestVersion(t *testing.T) {" >> "pkg/${PROJECT_NAME}/${PROJECT_NAME}_test.go"
-            echo '    if v := Version(); v == "" {' >> "pkg/${PROJECT_NAME}/${PROJECT_NAME}_test.go"
-            echo '        t.Error("Version() returned empty string")' >> "pkg/${PROJECT_NAME}/${PROJECT_NAME}_test.go"
-            echo "    }" >> "pkg/${PROJECT_NAME}/${PROJECT_NAME}_test.go"
-            echo "}" >> "pkg/${PROJECT_NAME}/${PROJECT_NAME}_test.go"
+        sdk)
+            echo -e "${BLUE}Setting up SDK project structure...${NC}"
+            # Create moonshot-style SDK structure
+            mkdir -p "pkg/client" "pkg/types" "pkg/errors" "examples/basic"
+            
+            # Create top-level SDK export file
+            printf '%s\n' "// Package ${PROJECT_NAME} provides an SDK for [describe your service/API]" > "${PROJECT_NAME}.go"
+            printf '%s\n' "package ${PROJECT_NAME}" >> "${PROJECT_NAME}.go"
+            printf '%s\n' '' >> "${PROJECT_NAME}.go"
+            printf '%s\n' 'import (' >> "${PROJECT_NAME}.go"
+            printf '%s\n' "    \"${MODULE_NAME}/pkg/client\"" >> "${PROJECT_NAME}.go"
+            printf '%s\n' ')' >> "${PROJECT_NAME}.go"
+            printf '%s\n' '' >> "${PROJECT_NAME}.go"
+            printf '%s\n' '// SDK combines all service clients' >> "${PROJECT_NAME}.go"
+            printf '%s\n' 'type SDK struct {' >> "${PROJECT_NAME}.go"
+            printf '%s\n' '    Client *client.Client' >> "${PROJECT_NAME}.go"
+            printf '%s\n' '}' >> "${PROJECT_NAME}.go"
+            printf '%s\n' '' >> "${PROJECT_NAME}.go"
+            printf '%s\n' '// New creates a new SDK instance' >> "${PROJECT_NAME}.go"
+            printf '%s\n' 'func New(opts ...client.Option) *SDK {' >> "${PROJECT_NAME}.go"
+            printf '%s\n' '    c := client.New(opts...)' >> "${PROJECT_NAME}.go"
+            printf '%s\n' '    return &SDK{' >> "${PROJECT_NAME}.go"
+            printf '%s\n' '        Client: c,' >> "${PROJECT_NAME}.go"
+            printf '%s\n' '    }' >> "${PROJECT_NAME}.go"
+            printf '%s\n' '}' >> "${PROJECT_NAME}.go"
+            printf '%s\n' '' >> "${PROJECT_NAME}.go"
+            printf '%s\n' '// Version returns the SDK version' >> "${PROJECT_NAME}.go"
+            printf '%s\n' 'func Version() string {' >> "${PROJECT_NAME}.go"
+            printf '%s\n' '    return "0.1.0"' >> "${PROJECT_NAME}.go"
+            printf '%s\n' '}' >> "${PROJECT_NAME}.go"
+            
+            # Create client package
+            printf '%s\n' "// Package client provides the core HTTP client for ${PROJECT_NAME}" > "pkg/client/client.go"
+            printf '%s\n' 'package client' >> "pkg/client/client.go"
+            printf '%s\n' '' >> "pkg/client/client.go"
+            printf '%s\n' 'import (' >> "pkg/client/client.go"
+            printf '%s\n' '    "context"' >> "pkg/client/client.go"
+            printf '%s\n' '    "net/http"' >> "pkg/client/client.go"
+            printf '%s\n' '    "time"' >> "pkg/client/client.go"
+            printf '%s\n' ')' >> "pkg/client/client.go"
+            printf '%s\n' '' >> "pkg/client/client.go"
+            printf '%s\n' '// Client represents the HTTP client' >> "pkg/client/client.go"
+            printf '%s\n' 'type Client struct {' >> "pkg/client/client.go"
+            printf '%s\n' '    httpClient *http.Client' >> "pkg/client/client.go"
+            printf '%s\n' '    baseURL    string' >> "pkg/client/client.go"
+            printf '%s\n' '}' >> "pkg/client/client.go"
+            printf '%s\n' '' >> "pkg/client/client.go"
+            printf '%s\n' '// Option defines a function for configuring the client' >> "pkg/client/client.go"
+            printf '%s\n' 'type Option func(*Client)' >> "pkg/client/client.go"
+            printf '%s\n' '' >> "pkg/client/client.go"
+            printf '%s\n' '// WithHTTPClient sets a custom HTTP client' >> "pkg/client/client.go"
+            printf '%s\n' 'func WithHTTPClient(client *http.Client) Option {' >> "pkg/client/client.go"
+            printf '%s\n' '    return func(c *Client) {' >> "pkg/client/client.go"
+            printf '%s\n' '        c.httpClient = client' >> "pkg/client/client.go"
+            printf '%s\n' '    }' >> "pkg/client/client.go"
+            printf '%s\n' '}' >> "pkg/client/client.go"
+            printf '%s\n' '' >> "pkg/client/client.go"
+            printf '%s\n' '// WithBaseURL sets the base URL for API requests' >> "pkg/client/client.go"
+            printf '%s\n' 'func WithBaseURL(url string) Option {' >> "pkg/client/client.go"
+            printf '%s\n' '    return func(c *Client) {' >> "pkg/client/client.go"
+            printf '%s\n' '        c.baseURL = url' >> "pkg/client/client.go"
+            printf '%s\n' '    }' >> "pkg/client/client.go"
+            printf '%s\n' '}' >> "pkg/client/client.go"
+            printf '%s\n' '' >> "pkg/client/client.go"
+            printf '%s\n' '// New creates a new client instance' >> "pkg/client/client.go"
+            printf '%s\n' 'func New(opts ...Option) *Client {' >> "pkg/client/client.go"
+            printf '%s\n' '    c := &Client{' >> "pkg/client/client.go"
+            printf '%s\n' '        httpClient: &http.Client{Timeout: 30 * time.Second},' >> "pkg/client/client.go"
+            printf '%s\n' '        baseURL:    "https://api.example.com",' >> "pkg/client/client.go"
+            printf '%s\n' '    }' >> "pkg/client/client.go"
+            printf '%s\n' '' >> "pkg/client/client.go"
+            printf '%s\n' '    for _, opt := range opts {' >> "pkg/client/client.go"
+            printf '%s\n' '        opt(c)' >> "pkg/client/client.go"
+            printf '%s\n' '    }' >> "pkg/client/client.go"
+            printf '%s\n' '' >> "pkg/client/client.go"
+            printf '%s\n' '    return c' >> "pkg/client/client.go"
+            printf '%s\n' '}' >> "pkg/client/client.go"
+            printf '%s\n' '' >> "pkg/client/client.go"
+            printf '%s\n' '// Get performs a GET request' >> "pkg/client/client.go"
+            printf '%s\n' 'func (c *Client) Get(ctx context.Context, path string) (*http.Response, error) {' >> "pkg/client/client.go"
+            printf '%s\n' '    req, err := http.NewRequestWithContext(ctx, "GET", c.baseURL+path, nil)' >> "pkg/client/client.go"
+            printf '%s\n' '    if err != nil {' >> "pkg/client/client.go"
+            printf '%s\n' '        return nil, err' >> "pkg/client/client.go"
+            printf '%s\n' '    }' >> "pkg/client/client.go"
+            printf '%s\n' '    return c.httpClient.Do(req)' >> "pkg/client/client.go"
+            printf '%s\n' '}' >> "pkg/client/client.go"
+            
+            # Create client test
+            printf '%s\n' 'package client' > "pkg/client/client_test.go"
+            printf '%s\n' '' >> "pkg/client/client_test.go"
+            printf '%s\n' 'import "testing"' >> "pkg/client/client_test.go"
+            printf '%s\n' '' >> "pkg/client/client_test.go"
+            printf '%s\n' 'func TestNew(t *testing.T) {' >> "pkg/client/client_test.go"
+            printf '%s\n' '    client := New()' >> "pkg/client/client_test.go"
+            printf '%s\n' '    if client == nil {' >> "pkg/client/client_test.go"
+            printf '%s\n' '        t.Error("New() returned nil")' >> "pkg/client/client_test.go"
+            printf '%s\n' '    }' >> "pkg/client/client_test.go"
+            printf '%s\n' '}' >> "pkg/client/client_test.go"
+            
+            # Create types package
+            printf '%s\n' "// Package types contains shared types for ${PROJECT_NAME}" > "pkg/types/types.go"
+            printf '%s\n' 'package types' >> "pkg/types/types.go"
+            printf '%s\n' '' >> "pkg/types/types.go"
+            printf '%s\n' '// Response represents a generic API response' >> "pkg/types/types.go"
+            printf '%s\n' 'type Response struct {' >> "pkg/types/types.go"
+            printf '%s\n' '    Success bool        `json:"success"`' >> "pkg/types/types.go"
+            printf '%s\n' '    Message string      `json:"message,omitempty"`' >> "pkg/types/types.go"
+            printf '%s\n' '    Data    interface{} `json:"data,omitempty"`' >> "pkg/types/types.go"
+            printf '%s\n' '}' >> "pkg/types/types.go"
+            
+            # Create errors package
+            printf '%s\n' "// Package errors provides error types for ${PROJECT_NAME}" > "pkg/errors/errors.go"
+            printf '%s\n' 'package errors' >> "pkg/errors/errors.go"
+            printf '%s\n' '' >> "pkg/errors/errors.go"
+            printf '%s\n' 'import "fmt"' >> "pkg/errors/errors.go"
+            printf '%s\n' '' >> "pkg/errors/errors.go"
+            printf '%s\n' '// APIError represents an API error' >> "pkg/errors/errors.go"
+            printf '%s\n' 'type APIError struct {' >> "pkg/errors/errors.go"
+            printf '%s\n' '    Code    int    `json:"code"`' >> "pkg/errors/errors.go"
+            printf '%s\n' '    Message string `json:"message"`' >> "pkg/errors/errors.go"
+            printf '%s\n' '}' >> "pkg/errors/errors.go"
+            printf '%s\n' '' >> "pkg/errors/errors.go"
+            printf '%s\n' 'func (e *APIError) Error() string {' >> "pkg/errors/errors.go"
+            printf '%s\n' '    return fmt.Sprintf("API error %d: %s", e.Code, e.Message)' >> "pkg/errors/errors.go"
+            printf '%s\n' '}' >> "pkg/errors/errors.go"
+            
+            # Create example
+            printf '%s\n' 'package main' > "examples/basic/main.go"
+            printf '%s\n' '' >> "examples/basic/main.go"
+            printf '%s\n' 'import (' >> "examples/basic/main.go"
+            printf '%s\n' '    "fmt"' >> "examples/basic/main.go"
+            printf '%s\n' "    \"${MODULE_NAME}\"" >> "examples/basic/main.go"
+            printf '%s\n' ')' >> "examples/basic/main.go"
+            printf '%s\n' '' >> "examples/basic/main.go"
+            printf '%s\n' 'func main() {' >> "examples/basic/main.go"
+            printf '%s\n' "    sdk := ${PROJECT_NAME}.New()" >> "examples/basic/main.go"
+            printf '%s\n' "    fmt.Printf(\"${PROJECT_NAME} SDK version: %s\\n\", ${PROJECT_NAME}.Version())" >> "examples/basic/main.go"
+            printf '%s\n' '    fmt.Printf("SDK initialized: %v\\n", sdk != nil)' >> "examples/basic/main.go"
+            printf '%s\n' '}' >> "examples/basic/main.go"
+            
+            # Clean up example directories
             rm -rf "cmd/example" "pkg/example"
             ;;
         api)
@@ -426,7 +549,7 @@ bootstrap-help:
     @echo ""
     @echo "{{bold}}Arguments:{{reset}}"
     @echo "  module-name     Go module name (default: github.com/<git-user>/<current-dir>)"
-    @echo "  type            Project type: cli, library, sharedlib, api (default: cli)"
+    @echo "  type            Project type: cli, sdk, sharedlib, api (default: cli)"
     @echo ""
     @echo "{{bold}}Notes:{{reset}}"
     @echo "  - Bootstraps the current directory (must be run from project root)"
@@ -436,4 +559,4 @@ bootstrap-help:
     @echo "{{bold}}Examples:{{reset}}"
     @echo "  just bootstrap                           # Uses defaults"
     @echo "  just bootstrap github.com/user/myapp     # Custom module, default type (cli)"
-    @echo "  just bootstrap github.com/org/mylib library  # Custom module and type"
+    @echo "  just bootstrap github.com/org/mylib sdk  # Custom module and type"

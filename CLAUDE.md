@@ -23,14 +23,14 @@ just build-linux-docker
 # Bootstrap the current directory as a new project
 just bootstrap                                    # Uses defaults
 just bootstrap github.com/user/myproject          # Custom module name
-just bootstrap github.com/user/myproject library  # Custom module and type
+just bootstrap github.com/user/myproject sdk  # Custom module and type
 ```
 
 ### Bootstrap Command
 
 The `bootstrap` command initializes the current directory as a new Go project. It:
 - Creates a go.mod file with the specified module name
-- Sets up the project structure based on type (cli, library, sharedlib, api)
+- Sets up the project structure based on type (cli, sdk, sharedlib, api)
 - Updates all imports from the template to your module name
 - Creates minimal starter files for your project type
 - Does NOT manipulate go.mod beyond creation
@@ -59,7 +59,7 @@ Use standard Go testing practices with `go test` or `make test`.
 
 ## Important Notes
 
-- The template supports multiple project types: CLI, library, shared C library, and API server
+- The template supports multiple project types: CLI, SDK, shared C library, and API server
 - Shared library projects can build .dylib (macOS) and .so (Linux) files for C interoperability
 - Contact: hi@rizome.dev
 - Documentation: https://pkg.go.dev/github.com/rizome-dev/tmpl
